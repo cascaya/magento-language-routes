@@ -40,10 +40,23 @@ class MKleine_LanguageRoutes_Model_Translation extends Mage_Core_Model_Abstract
 {
     const LANGUAGEROUTE_CACHE_TAG = 'languageroute';
 
-    public function getStoreId()
+    public function getStoreId($from = false)
     {
         if (!$this->hasData('store_id')) {
             $this->setData('store_id', $storeId = Mage::app()->getStore()->getId());
+        }
+        if (!$this->hasData('from_store_id')) {
+          if ($request = $this->getRequest() ) {
+            if ($code = $request->getParam('___from_store')) {
+              $this->setData('from_store_id', Mage::getModel('core/store')->load($code)->getId());
+            }
+          } else {
+            $this->setData('from_store_id', 0);
+          }
+        }
+
+        if ($from) {
+          return $this->getData('from_store_id');
         }
         return $this->getData('store_id');
     }
@@ -139,16 +152,21 @@ class MKleine_LanguageRoutes_Model_Translation extends Mage_Core_Model_Abstract
             ->addFieldToFilter('translation', $translation);
 
         $cacheKey = sprintf('language_route_mage_%d_%d_%s', $this->getStoreId(), $typeId, $translation);
+        if (count($collection) == 0 && $this->getStoreId(true) > 0) {
+          $collection = $this->getRouteCollection($typeId, true)
+            ->addFieldToFilter('translation', $translation);
+          $cacheKey = sprintf('language_route_mage_%d_%d_%s', $this->getStoreId(true), $typeId, $translation);
+        }
         return $this->getValueOfCollection('value', $collection, $translation, $cacheKey);
     }
 
     /**
      * @return MKleine_LanguageRoutes_Model_Resource_Languageroute_Collection
      */
-    protected function getRouteCollection($typeId)
+    protected function getRouteCollection($typeId,$from = false)
     {
         return Mage::getModel('mk_languageroutes/languageroute')->getCollection()
-            ->addFieldToFilter('store_id', $this->getStoreId())
+            ->addFieldToFilter('store_id', $this->getStoreId($from))
             ->addFieldToFilter('type_id', $typeId)
             ->addFieldToFilter('is_active', 1);
     }
