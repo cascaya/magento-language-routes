@@ -46,12 +46,11 @@ class MKleine_LanguageRoutes_Model_Translation extends Mage_Core_Model_Abstract
             $this->setData('store_id', $storeId = Mage::app()->getStore()->getId());
         }
         if (!$this->hasData('from_store_id')) {
+          $this->setData('from_store_id', array("like" => '%'));
           if ($request = $this->getRequest() ) {
             if ($code = $request->getParam('___from_store')) {
               $this->setData('from_store_id', Mage::getModel('core/store')->load($code)->getId());
             }
-          } else {
-            $this->setData('from_store_id', 0);
           }
         }
 
@@ -103,7 +102,6 @@ class MKleine_LanguageRoutes_Model_Translation extends Mage_Core_Model_Abstract
             MKleine_LanguageRoutes_Model_Languageroute::LANGUAGEROUTE_TYPE_ROUTER
         );
     }
-
     public function translateControllerToMage($controller)
     {
         return $this->translateToMage(
@@ -152,11 +150,16 @@ class MKleine_LanguageRoutes_Model_Translation extends Mage_Core_Model_Abstract
             ->addFieldToFilter('translation', $translation);
 
         $cacheKey = sprintf('language_route_mage_%d_%d_%s', $this->getStoreId(), $typeId, $translation);
-        if (count($collection) == 0 && $this->getStoreId(true) > 0) {
+        if (count($collection) == 0 && ( is_numeric($this->getStoreId(true)) &&$this->getStoreId(true) > 0)) {
           $collection = $this->getRouteCollection($typeId, true)
             ->addFieldToFilter('translation', $translation);
           $cacheKey = sprintf('language_route_mage_%d_%d_%s', $this->getStoreId(true), $typeId, $translation);
+        } else if (count($collection) == 0) {
+          $collection = $this->getRouteCollection($typeId, true)
+            ->addFieldToFilter('translation', $translation);
+          $cacheKey = sprintf('language_route_mage_%d_%d_%s', $this->getStoreId(), $typeId, $translation);
         }
+
         return $this->getValueOfCollection('value', $collection, $translation, $cacheKey);
     }
 
